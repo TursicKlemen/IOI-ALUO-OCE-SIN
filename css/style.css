@@ -1,0 +1,8 @@
+.forma{
+    width: 250px;   
+}
+
+.panel-body.margin-decr{
+    padding-top: 10px!important;
+    padding-bottom: 10px!important;
+}
