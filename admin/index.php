@@ -1,18 +1,34 @@
 <!DOCTYPE HTML>
 	<?php
 	require("../conf.php");
-	$daysShow = 50;
-	
-	if(isset($_POST['submit']) && isset($_POST['oce']) && isset($_POST['sin']) && isset($_POST['coords']) && isset($_POST['coordsInv'])  && isset($_POST['center']) && isset($_POST['formid']) && isset($_SESSION['formid']) && $_POST["formid"] == $_SESSION["formid"]){
+	//default vrednost, se potem povozi iz baze
+	$daysShow = 30;
+
+	if(isset($_POST['submit']) /*&& isset($_POST['formid']) && isset($_SESSION['formid']) && $_POST["formid"] == $_SESSION["formid"]*/){
 	
 		$_SESSION["formid"] = '';
+		unset($_POST['formid']);
+		unset($_POST['submit']);
 		//echo 'Process form';
-		saveToBase($db);
+		$success = true;
+		foreach($_POST as $kljuc => $vrednost){
+			if(!updateKonfig($kljuc, $vrednost)){
+				$success = false;
+			}
+		}
+		
+		if($success){
+			echo "<script>alert('Podatki uspešno shranjeni.');</script>";
+		}
+		else{
+			echo "<script>alert('Napaka pri shranjevanju.');</script>";
+		}
 	}
 	else
 	{
 		$_SESSION["formid"] = md5(rand(0,10000000));
 	}
+
 	
 	
 	function saveToBase($db){
@@ -44,35 +60,28 @@
 		
 	}
 	
-	function readRecords(){
-		global $db, $daysShow;
-		$records = array();
-		$sql = "SELECT * FROM records";        
-		try {
-			$q = $db->prepare($sql);
-			$q->execute();
-			$result = $q->fetchall();
+	function updateKonfig($key, $value){
+		global $db;
+		$seznam = array(
+				":1"=>$key,
+				":2"=>$value);
 		
-			foreach($result as $key => $value) {
-				$daysAgo = floor((time()-strtotime($value['date'])) / (60 * 60 * 24));
-				if($daysAgo<=$daysShow){
-					$opacity = 1 - ($daysAgo/$daysShow);
-					if($opacity > 0){
-						$records[] = array("coords" => json_decode($value['coords']),
-									   "coordsInv" => json_decode($value['coordsInv']),
-									   "opacity" => $opacity);
-					}
-				}
-				
-			}			
-		}
-		catch (PDOException $ex) {
-			die("Napaka: ".$ex->getMessage());
-		}
-		return $records;
+		$query = "UPDATE konfig SET value = :2 WHERE kljuc = :1";
+		
+		try 
+			{ 
+				$stmt   = $db->prepare($query);
+				$result = $stmt->execute($seznam);				
+			} 
+		catch(PDOException $ex) 
+			{
+				return false;
+				die("Napaka: " . $ex->getMessage()); 
+			}
+			return true;
 	}
 	
-	function readNames(){
+	function readRecords(){
 		global $db, $daysShow;
 		$records = array();
 		$sql = "SELECT * FROM records ORDER BY date DESC";        
@@ -83,16 +92,20 @@
 		
 			foreach($result as $key => $value) {
 				$daysAgo = floor((time()-strtotime($value['date'])) / (60 * 60 * 24));
+				$visible = false;
 				if($daysAgo<=$daysShow){
 					$opacity = 1 - ($daysAgo/$daysShow);
-					if($opacity > 0.1){
-						$records[] = array("id" => $value['id'],
-								   "nameFather" => $value['nameFather'],
-								   "nameSon" => $value['nameSon'],
-								   "opacity" => $opacity);
-					}
-					
+					if($opacity > 0){
+						$visible = true;
+					}					
 				}
+				
+				$records[] = array("id" => $value['id'],
+									"date" => $value['date'],
+									"ip" => $value['ip'],									
+									"nameFather" => $value['nameFather'],
+									"nameSon" => $value['nameSon'],
+									"visible" => $visible);
 				
 			}			
 		}
@@ -102,24 +115,33 @@
 		return $records;
 	}
 	
-	/*$records = readRecords();
-	var_dump($records);
-	die();*/
+	
+	function readKonfig(){
+		global $db, $daysShow;
+		$records = array();
+		$sql = "SELECT * FROM konfig";        
+		try {
+			$q = $db->prepare($sql);
+			$q->execute();
+			$result = $q->fetchall();
+
+			foreach($result as $key => $value) {
+				$records[$value['kljuc']] = $value['value'];
+			}			
+		}
+		catch (PDOException $ex) {
+			die("Napaka: ".$ex->getMessage());
+		}
+		return $records;
+	}
+	
+	$konfig = readKonfig();
+	$daysShow = $konfig['days'];
+	
 	
 	?>
 <html>
-  <head>
-    <style>
-      body {
-        margin: 0px;
-        padding: 0px;
-      }
-	  
-	  canvas {
-    /*border: 1px dashed rgb(200, 200, 200);*/
-}
-
-    </style>
+  <head>   
 	<link rel="stylesheet" href="../css/bootstrap.min.css">	
 	<!-- Optional theme -->
 	<link rel="stylesheet" href="../css/bootstrap-theme.min.css">
@@ -128,40 +150,155 @@
     <script src="../js/jquery-ui.js"></script>
 	<!-- Latest compiled and minified JavaScript -->
 	<script src="../js/bootstrap.min.js"></script>
-	<link rel="stylesheet" href="../css/style.css">	
+	<link rel="stylesheet" href="../css/style.css">
+	<title>ADMIN - FRI & ALUO - Oče in sin; By Klemen Turšič</title>
   </head>
   <body>
 	<div class="container">
 		<br>
-		<div class="panel panel-info">
-			<div class="panel-heading">Nariši 1 linijo kot ti veleva tvoja imaginacija in napiši ime tvojega očeta in sina.</div>
-			<div class="panel-body margin-decr">Draw 1 line as you obey your imagination and write your father's and son's name.</div>
-		  </div>
-    
-		
-		<center>
-			<h3 class="naslov"><!---Oče, jaz in sin--></h3>
-			<canvas id="myCanvas" width="500" height="500"></canvas>
-			<br>
-			<div class="forma">
-				<input type="button" class="btn btn-default" name="Reset" id="clear" value="Reset" /><br><br>
-				<form method="POST" name="form1" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" onsubmit="return validate();">
-					<div class="form-group">
-						<input type="text" name="oce" class="form-control" required placeholder="Ime vašega očeta" /><br>
-						<input type="text" name="sin" class="form-control" required placeholder="Ime vašega sina" /><br>
-						<input type="hidden" id="coords" name="coords" value="" />
-						<input type="hidden" id="coordsInv" name="coordsInv" value="" />
-						<input type="hidden" id="center" name="center" value="" />
-						<input type="hidden" name="formid" value="<?php echo htmlspecialchars($_SESSION["formid"]); ?>" />
-						<input type="submit" class="btn btn-default" name="submit" value="Objavi in shrani v bazo	" />
+		<div class="panel panel-<?php echo $konfig['barvnaShema']; ?>">
+			<div class="panel-heading">Administrator plošča</div>
+			<div class="panel-body margin-decr">
+				<center>		
+					<div>
+						<a href="../" target="_blank">Odpri spletno stran</a><br><br>
+						<form method="POST" name="form1" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" onsubmit="return validate();">
+							<div class="row">
+								<div class="col-sm-offset-2 col-sm-8">
+									
+									<div class="row">
+										<div class="panel panel-default">
+											<div class="panel-body">
+												<div class="col-sm-6">
+													<div class="form-group">
+														<label for="slov">Navodilo SLO:</label>								
+														<textarea class="form-control" rows="3" name="slov" id="slov"><?php echo $konfig['slov']; ?></textarea>
+													</div>
+												</div>								
+												<div class="col-sm-6">
+													<div class="form-group">
+														<label for="engl">Navodilo ANG:</label>
+														<textarea class="form-control" rows="3" name="engl" id="engl"><?php echo $konfig['engl']; ?></textarea>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									
+									<div class="row">
+										<div class="panel panel-default">
+											<div class="panel-body" aria-describedby="imenaHelp">
+												<div class="col-sm-6">
+													<div class="form-group">
+														<label for="namesSLO">Shranjena imena naslov SLO:</label>																
+														<textarea class="form-control" rows="3" name="namesSLO" id="namesSLO"><?php echo $konfig['namesSLO']; ?></textarea>
+													</div>
+												</div>
+																		
+												<div class="col-sm-6">
+													<div class="form-group">
+														<label for="namesANG">Shranjena imena naslov ANG:</label>																
+														<textarea class="form-control" rows="3" name="namesANG" id="namesANG"><?php echo $konfig['namesANG']; ?></textarea>								
+													</div>
+												</div>
+											</div>
+											<p id="imenaHelp" class="form-text text-muted">
+											Za prikaz dejanskega števila dni prikaza uporabite {d}.
+										  </p>
+										</div>
+									</div>									
+																		
+									<div class="row">
+										<div class="panel panel-default">
+											<div class="panel-body">
+												<div class="row">
+													<div class="col-sm-6">
+														<div class="form-group">
+															<label for="lineColor">Barva starih črt:</label>
+															<div class="input-group">
+																<input type="color" name="lineColor" id="lineColor" class="form-control" required value="<?php echo $konfig['lineColor']; ?>" />													
+															</div>
+														</div>
+													</div>
+			
+													<div class="col-sm-6">
+														<div class="form-group">
+															<label for="drawingColor">Barva črte med risanjem:</label>
+															<div class="input-group">
+																<input type="color" name="drawingColor" id="drawingColor" class="form-control" required value="<?php echo $konfig['drawingColor']; ?>" />													
+															</div>
+														</div>
+													</div>
+												</div>
+												
+												<div class="row">
+													<div class="col-sm-6">
+														<div class="form-group">
+															<label for="lineWidth">Debelina starih črt:</label>
+															<div class="input-group">
+																<input id="lineWidth" name="lineWidth" type="number" min="1" max="10" step="1" required value="<?php echo $konfig['lineWidth']; ?>" />
+															</div>
+														</div>
+													</div>
+			
+													<div class="col-sm-6">
+														<div class="form-group">
+															<label for="drawingWidth">Debelina črte med risanjem:</label>
+															<div class="input-group">																
+																<input id="drawingWidth" name="drawingWidth" type="number" min="1" max="10" step="1" required value="<?php echo $konfig['drawingWidth']; ?>" />
+															</div>
+														</div>
+													</div>
+												</div>
+												
+												<div class="row">
+													<div class="col-sm-offset-4 col-sm-4">
+														<div class="form-group">
+															<label for="days">Izris zgodovine črt za obdobje:</label>
+															<div class="input-group">
+																<input type="number" name="days" id="days" class="form-control" required value="<?php echo $konfig['days']; ?>" onkeypress='return event.charCode >= 48 && event.charCode <= 57;' />
+																<div class="input-group-addon">dni</div>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>									
+									
+									<div class="row">
+										<div class="col-sm-offset-3 col-sm-6">																				
+											<div class="form-group">
+												<label for="barvnaShema">Barvna shema:</label>
+												<select class="form-control" id="barvnaShema" name="barvnaShema">
+													<option value="default" <?php echo ($konfig['barvnaShema'] == "default"?"selected":""); ?>>Siva</option>
+													<option value="primary" <?php echo ($konfig['barvnaShema'] == "primary"?"selected":""); ?>>Temno modra</option>
+													<option value="info" <?php echo ($konfig['barvnaShema'] == "info"?"selected":""); ?>>Svetlo modra</option>
+													<option value="success" <?php echo ($konfig['barvnaShema'] == "success"?"selected":""); ?>>Zelena</option>
+													<option value="warning" <?php echo ($konfig['barvnaShema'] == "warning"?"selected":""); ?>>Rumena</option>
+													<option value="danger" <?php echo ($konfig['barvnaShema'] == "danger"?"selected":""); ?>>Rdeča</option>
+												</select>
+											</div>				
+										</div>
+									</div>	
+									
+									<input type="hidden" name="formid" value="<?php echo htmlspecialchars($_SESSION["formid"]); ?>" />
+									
+									<div class="form-group">
+										<input type="submit" class="btn btn-default" name="submit" value="Shrani" />
+									</div>
+							
+								</div>
+							</div>
+						</form>
 					</div>
-				</form>
+				</center>
 			</div>
-		</center>
+		</div>
 		<br>
-		<div class="panel panel-info">
+		<div class="panel panel-<?php echo $konfig['barvnaShema']; ?>">
 			<div class="panel-heading">
-				<h3 class="panel-title">Shranjena imena / Saved names</h3>
+				<h3 class="panel-title">Shranjena imena</h3>
 			</div>
 			<div class="panel-body text-center">
 				
@@ -172,315 +309,60 @@
 							Ime2
 						</div>
 					</div>
-				</div>*/ ?>
+				</div>*/
+				$days_ago = date('d.m.Y', strtotime("-".$daysShow." days", strtotime(date("r"))));
+				echo "<p>Grafični prikaz za zapise do datuma: <b>".$days_ago."</b></p>";
 				
+				?>
+				<table class="table table-striped table-bordered table-hover table-condensed">
+					<thead>
+						<tr>
+							<th>ID</th>
+							<th>Datum</th>
+							<th>IP</th>
+							<th>Oče</th>
+							<th>Sin</th>
+							<th>Prikazan</th>
+						</tr>
+					</thead>
+					<tbody>
 				<?php
 				
-					$inserts = readNames();
+					$records = readRecords();
 					
-					foreach($inserts as $insert){
-						echo "<div class='panel panel-default col-sm-2'>";
-						echo "<div class='panel-body text-center' style='color: rgba(0, 0, 0, ".$insert['opacity'].")'>";
-						//echo "<div class='btn-group' role='group' aria-label='...'>";
-						echo $insert["nameFather"]."<br>";
-						echo $insert["nameSon"];
-						//echo "</div>";
-						echo "</div>";
-						echo "</div>";						
+					foreach($records as $insert){
+						$date = DateTime::createFromFormat('Y-m-d H:i:s', $insert['date']);
+						
+						echo "<tr title='".$insert['id'].": ".$insert['nameFather']." - ". $insert['nameSon'] ."'>";
+						echo "<td>".$insert['id']."</td>";
+						echo "<td>".$date->format('d.m.Y H:i:s')."</td>";
+						echo "<td>".$insert['ip']."</td>";
+						echo "<td>".$insert['nameFather']."</td>";
+						echo "<td>".$insert['nameSon']."</td>";
+						echo "<td><i class='glyphicon ".($insert['visible'] == true?" glyphicon-ok text-success":" glyphicon-remove text-danger")."'></i></td>";
+						echo "</tr>";
+									
 					}
 				
 				?>
-
+					</tbody>
+				</table>
 				
 			</div>
-		</div>
-		
+		</div>		
 
-    <script>
-		
-		function newCoord(x, y){
-			if(x>250){
-					newX = 250-(x-250);
-				}
-				else if(x<250){
-					newX = 250+(250-x);
-				}
-				else{
-					newX = x;
-				}
-				
-				if(y>250){
-					newY = 250-(y-250);
-				}
-				else if(y<250){
-					newY = 250+(250-y);
-				}
-				else{
-					newY = y;
-				}
-				return {x:newX, y:newY};
-		}
-		
-		function drawPath(seznam, opacity){
-			var first = true;
-			var arrayLength = seznam.length;
-			for (var i = 0; i < arrayLength; i++) {
-					koord = newCoord(seznam[i].x, seznam[i].y);
-					if(!first){
-							context.beginPath();
-							context.moveTo(koordF.x, koordF.y);
-							context.lineTo(koord.x, koord.y, 6);
-		
-							context.strokeStyle = 'rgba(0, 0, 0, '+opacity+')';
-							
-							context.lineWidth = 1;
-							context.stroke();					
-							koordF = koord;
-					}
-					else{
-						first = false;
-						koordF = koord;
-					}
-			}
-		}
-		
-      canvas = document.getElementById('myCanvas');
-      context = canvas.getContext('2d');
-      centerX = canvas.width / 2;
-      centerY = canvas.height / 2;
-      radius = 240;
-			
-			points = [];
-			pointsInv = [];
-      isDown = false;
-	</script>
-	
-		<script>
-		records = [];
-		<?php
-		$records = readRecords();
-		echo "records = ".json_encode($records).";";
-		?>
-		
-		function drawRecords(){
-			records.forEach(function(obj) {			
-				drawPath(obj.coords, obj.opacity);
-				drawPath(obj.coordsInv, obj.opacity);
-			});
-		}		
-		
-		
-	</script>
-	
-	<script>
-function init(){
-	points = [];
-	pointsInv = [];
-  isDown = false;
-	
-	lineDrawed = false;
-	document.getElementById("coords").value = "";
-	
-				//krog
-      context.beginPath();
-      context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
-      /*context.fillStyle = 'green';
-      context.fill();*/
-      context.lineWidth = 1;
-      context.strokeStyle = '#003300';
-      context.stroke();
-			
-		//sredinska točka
-		context.beginPath();
-		context.arc(centerX, centerY, 2, 0, 2 * Math.PI, true);
-		context.fill();
-	  
-	  drawRecords();
-	  
-	  context.lineWidth = 2;
-	  
-	  clicks = 0;
-		lastClick = [0, 0];
-	
-	
-}
-
-init();
-
-//Risanje po canvasu
-		
-start();
-function start() {
-	
-	/*canvas.addEventListener("touchstart", function (e) {
-		console.log("test");
-	});*/
-		    
-    canvas.onmousedown = function(e) {
-			if(!lineDrawed){
-        var pos = getXY(e);
-        last = pos;
-
-        points = [];
-		pointsInv = [];
-        isDown = true;
-        points.push(pos);
-		pointsInv.push(newCoord(pos.x, pos.y));
-			}
-    };
-
-    canvas.onmousemove = function(e) {
-				if(!lineDrawed){
-        if (!isDown) return;
-        
-        var pos = getXY(e);
-        points.push(pos);
-        
-        context.beginPath();
-        context.moveTo(last.x, last.y);
-        context.lineTo(pos.x, pos.y);
-        context.stroke();
-				
-		//mirorring
-		
-		koordL = newCoord(last.x, last.y);
-		koordN = newCoord(pos.x, pos.y);
-		
-		context.beginPath();
-		/*koordL = calcCoord(last.x, last.y);
-		koordN = calcCoord(pos.x, pos.y);*/
-				
-        context.moveTo(koordL.x, koordL.y);
-        context.lineTo(koordN.x, koordN.y);
-        context.stroke();
-		//end mirroring				
-				
-        pointsInv.push(koordN);
-				
-        last = pos;
-				}
-    };
-
-    canvas.onmouseup = function(e) {
-			if(!lineDrawed){
-        if (!isDown) return;        
-        isDown = false;
-				lineDrawed = true;
-				
-				//mirrorImage();
-				/*context.save();
-				context.translate(canvas.width/2, canvas.height/2);	
-				// Rotate 1 degree
-				context.rotate(Math.PI / 1);				
-				// Move registration point back to the top left corner of canvas
-				context.translate(-canvas.width/2, -canvas.height/2);
-				redrawImage();
-				context.restore();*/
-				
-				//mirrorImage();
-				document.getElementById("coords").value = JSON.stringify(points);
-				document.getElementById("coordsInv").value = JSON.stringify(pointsInv);
-				document.getElementById("center").value = centerX;
-				
-			}
-    };
-	
-}
-
-function validate(){
-	var coordInput = document.getElementById("coords").value;
-	if(coordInput == "" || !lineDrawed){
-		alert("Najprej narišite črto.");
-		return false;
-	}
-	return true;
-}
-
-function getXY(e) {
-    var rect = canvas.getBoundingClientRect();
-    return {x: e.clientX - rect.left, y: e.clientY - rect.top}
-}
-
-// bind event handler to clear button
-document.getElementById('clear').addEventListener('click', function() {
-	context.clearRect(0, 0, canvas.width, canvas.height);
-	init();	
-}, false);
-//End risanje po canvasu
-
-//document.getElementById('myCanvas').addEventListener('click', drawLine, false);
-
-function getCursorPosition(e) {
-    var x;
-    var y;
-
-    if (e.pageX != undefined && e.pageY != undefined) {
-        x = e.pageX;
-        y = e.pageY;
-    } else {
-        x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
-        y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
-    }
-    
-    return [x, y];
-}
-
-function drawLine(e) {
-	x = getCursorPosition(e)[0] - this.offsetLeft;
-	y = getCursorPosition(e)[1] - this.offsetTop;
-	
-	if(pointInCircle(x, y, 250, 250, 240)){
-		//klik je v krogu
-			context = this.getContext('2d');
-			
-			if (clicks != 1) {
-					clicks++;
-			} else {
-					context.beginPath();
-					context.moveTo(lastClick[0], lastClick[1]);
-					context.lineTo(x, y, 6);
-					
-					//context.strokeStyle = '#000000';
-					context.strokeStyle = 'black';
-					context.lineWidth = 3;
-					context.stroke();
-					
-					clicks = 0;
-			
-			
-			
-			newStart = newCoord(lastClick[0], lastClick[1]);
-			newEnd = newCoord(x, y);
-			
-			context.beginPath();
-					context.moveTo(newStart[0], newStart[1]);
-					context.lineTo(newEnd[0], newEnd[1], 6);
-					
-					//context.strokeStyle = '#000000';
-					context.strokeStyle = 'black';
-					context.lineWidth = 3;
-					context.stroke();
-			
-			
-			}
-			
-			lastClick = [x, y];
-	}
-	else{
-		//ni v krogu
-		
-	}
-};
-
-function pointInCircle(x, y, cx, cy, radius) {
-  var distancesquared = (x - cx) * (x - cx) + (y - cy) * (y - cy);
-  return distancesquared <= radius * radius;
-}
-
-
-
-	  
-    </script>
 	</div>
+	
+		<footer>
+		<div class="container">
+			<div class="row">
+				<div class="col-sm-12 text-center">
+					<p><a href="https://www.fri.uni-lj.si/" target="_blank">FRI</a> & <a href="http://www.aluo.uni-lj.si/" target="_blank">ALUO</a> 2017</p>		
+					<p>Copyright &copy; 2017 by <a href="mailto: tursic.klemen@gmail.com?Subject=Oce, jaz & sin - FRI & ALUO projekt - Mail iz spletne strani">Klemen Turšič (tursic.klemen@gmail.com)</a></p>
+				</div>
+			</div>
+		</div>
+	</footer>
+	
   </body>
 </html> 

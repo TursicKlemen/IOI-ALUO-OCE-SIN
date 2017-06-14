@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 	<?php
 	require("conf.php");
-	$daysShow = 50;
+	$daysShow = 30;
 	
 	if(isset($_POST['submit']) && isset($_POST['oce']) && isset($_POST['sin']) && isset($_POST['coords']) && isset($_POST['coordsInv'])  && isset($_POST['center']) && isset($_POST['formid']) && isset($_SESSION['formid']) && $_POST["formid"] == $_SESSION["formid"]){
 	
@@ -56,7 +56,7 @@
 			foreach($result as $key => $value) {
 				$daysAgo = floor((time()-strtotime($value['date'])) / (60 * 60 * 24));
 				if($daysAgo<=$daysShow){
-					$opacity = 1 - ($daysAgo/$daysShow);
+					$opacity = 1.1 - ($daysAgo/$daysShow);
 					if($opacity > 0){
 						$records[] = array("coords" => json_decode($value['coords']),
 									   "coordsInv" => json_decode($value['coordsInv']),
@@ -84,8 +84,8 @@
 			foreach($result as $key => $value) {
 				$daysAgo = floor((time()-strtotime($value['date'])) / (60 * 60 * 24));
 				if($daysAgo<=$daysShow){
-					$opacity = 1 - ($daysAgo/$daysShow);
-					if($opacity > 0.1){
+					$opacity = 1.1 - ($daysAgo/$daysShow);
+					if($opacity > 0){
 						$records[] = array("id" => $value['id'],
 								   "nameFather" => $value['nameFather'],
 								   "nameSon" => $value['nameSon'],
@@ -102,24 +102,32 @@
 		return $records;
 	}
 	
-	/*$records = readRecords();
-	var_dump($records);
-	die();*/
+	function readKonfig(){
+		global $db, $daysShow;
+		$records = array();
+		$sql = "SELECT * FROM konfig";        
+		try {
+			$q = $db->prepare($sql);
+			$q->execute();
+			$result = $q->fetchall();
+
+			foreach($result as $key => $value) {
+				$records[$value['kljuc']] = $value['value'];
+			}			
+		}
+		catch (PDOException $ex) {
+			die("Napaka: ".$ex->getMessage());
+		}
+		return $records;
+	}
+	
+	$konfig = readKonfig();
+	$daysShow = $konfig['days'];
+	
 	
 	?>
 <html>
   <head>
-    <style>
-      body {
-        margin: 0px;
-        padding: 0px;
-      }
-	  
-	  canvas {
-    /*border: 1px dashed rgb(200, 200, 200);*/
-}
-
-    </style>
 	<link rel="stylesheet" href="css/bootstrap.min.css">	
 	<!-- Optional theme -->
 	<link rel="stylesheet" href="css/bootstrap-theme.min.css">
@@ -128,14 +136,15 @@
     <script src="js/jquery-ui.js"></script>
 	<!-- Latest compiled and minified JavaScript -->
 	<script src="js/bootstrap.min.js"></script>
-	<link rel="stylesheet" href="css/style.css">	
+	<link rel="stylesheet" href="css/style.css">
+	<title>FRI & ALUO - Oče in sin; By Klemen Turšič</title>
   </head>
   <body>
 	<div class="container">
 		<br>
-		<div class="panel panel-info">
-			<div class="panel-heading">Nariši 1 linijo kot ti veleva tvoja imaginacija in napiši ime tvojega očeta in sina.</div>
-			<div class="panel-body margin-decr">Draw 1 line as you obey your imagination and write your father's and son's name.</div>
+		<div class="panel panel-<?php echo $konfig['barvnaShema']; ?>">
+			<div class="panel-heading"><?php echo $konfig['slov']; ?></div>
+			<div class="panel-body margin-decr"><?php echo $konfig['engl']; ?></div>
 		  </div>
     
 		
@@ -147,21 +156,21 @@
 				<input type="button" class="btn btn-default" name="Reset" id="clear" value="Reset" /><br><br>
 				<form method="POST" name="form1" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" onsubmit="return validate();">
 					<div class="form-group">
-						<input type="text" name="oce" class="form-control" required placeholder="Ime vašega očeta" /><br>
-						<input type="text" name="sin" class="form-control" required placeholder="Ime vašega sina" /><br>
+						<input type="text" name="oce" class="form-control" required placeholder="Vaš oče / Your father" /><br>
+						<input type="text" name="sin" class="form-control" required placeholder="Vaš sin / Your son" /><br>
 						<input type="hidden" id="coords" name="coords" value="" />
 						<input type="hidden" id="coordsInv" name="coordsInv" value="" />
 						<input type="hidden" id="center" name="center" value="" />
 						<input type="hidden" name="formid" value="<?php echo htmlspecialchars($_SESSION["formid"]); ?>" />
-						<input type="submit" class="btn btn-default" name="submit" value="Objavi in shrani v bazo	" />
+						<input type="submit" class="btn btn-default" name="submit" value="Shrani / Save" />
 					</div>
 				</form>
 			</div>
 		</center>
 		<br>
-		<div class="panel panel-info">
+		<div class="panel panel-<?php echo $konfig['barvnaShema']; ?>">
 			<div class="panel-heading">
-				<h3 class="panel-title">Shranjena imena / Saved names</h3>
+				<h3 class="panel-title"><?php echo str_replace("{d}", $daysShow, $konfig['namesSLO']); ?> / <?php echo str_replace("{d}", $daysShow, $konfig['namesANG']); ?></h3>
 			</div>
 			<div class="panel-body text-center">
 				
@@ -231,9 +240,9 @@
 							context.moveTo(koordF.x, koordF.y);
 							context.lineTo(koord.x, koord.y, 6);
 		
-							context.strokeStyle = 'rgba(0, 0, 0, '+opacity+')';
+							context.strokeStyle = 'rgba('+lineColor+', '+opacity+')';
 							
-							context.lineWidth = 1;
+							context.lineWidth = <?php echo $konfig['lineWidth']; ?>;
 							context.stroke();					
 							koordF = koord;
 					}
@@ -243,6 +252,21 @@
 					}
 			}
 		}
+		
+		function colorToRGB(value){
+			// #XXXXXX -> ["XX", "XX", "XX"]
+			var value = value.match(/[A-Za-z0-9]{2}/g);
+			
+			// ["XX", "XX", "XX"] -> [n, n, n]
+			value = value.map(function(v) { return parseInt(v, 16); });
+			
+			// [n, n, n] -> rgb(n,n,n)
+			//return "rgb(" + value.join(",") + ")";
+			return value.join(",");
+		}
+		
+		drawingColor = colorToRGB("<?php echo $konfig['drawingColor']; ?>");	
+		lineColor = colorToRGB("<?php echo $konfig['lineColor']; ?>");
 		
       canvas = document.getElementById('myCanvas');
       context = canvas.getContext('2d');
@@ -279,6 +303,7 @@ function init(){
   isDown = false;
 	
 	lineDrawed = false;
+	$("#myCanvas").css("cursor", "crosshair");
 	document.getElementById("coords").value = "";
 	
 				//krog
@@ -339,6 +364,10 @@ function start() {
         context.beginPath();
         context.moveTo(last.x, last.y);
         context.lineTo(pos.x, pos.y);
+		
+		context.lineWidth = <?php echo $konfig['drawingWidth']; ?>;
+		context.strokeStyle = 'rgba('+drawingColor+', 1)';
+		
         context.stroke();
 				
 		//mirorring
@@ -382,6 +411,7 @@ function start() {
 				document.getElementById("coordsInv").value = JSON.stringify(pointsInv);
 				document.getElementById("center").value = centerX;
 				
+				$("#myCanvas").css("cursor", "not-allowed");				
 			}
     };
 	
@@ -482,5 +512,16 @@ function pointInCircle(x, y, cx, cy, radius) {
 	  
     </script>
 	</div>
+	
+	<footer>
+		<div class="container">
+			<div class="row">
+				<div class="col-sm-12 text-center">
+					<p><a href="https://www.fri.uni-lj.si/" target="_blank">FRI</a> & <a href="http://www.aluo.uni-lj.si/" target="_blank">ALUO</a> 2017</p>		
+					<p>Copyright &copy; 2017 by <a href="mailto: tursic.klemen@gmail.com?Subject=Oce, jaz & sin - FRI & ALUO projekt - Mail iz spletne strani">Klemen Turšič (tursic.klemen@gmail.com)</a></p>
+				</div>
+			</div>
+		</div>
+	</footer>
   </body>
 </html> 

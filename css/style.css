@@ -1,8 +1,19 @@
-.forma{
-    width: 250px;   
+body {
+    margin: 0px;
+    padding: 0px;
+}
+.forma {
+    width: 250px;
+}
+#lineColor, #drawingColor {
+    width: 150px;
 }
 
-.panel-body.margin-decr{
+.panel-body.margin-decr {
     padding-top: 10px!important;
     padding-bottom: 10px!important;
+}
+
+#myCanvas {
+    cursor:crosshair;
 }
