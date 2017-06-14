@@ -66,7 +66,7 @@ if($vrstic->success && $vrstic->rows <= 0 && $createKonfig->success){
 
 $createRecords = executeSQL("CREATE TABLE IF NOT EXISTS `records` (
   `id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `date` datetime NOT NULL,
   `ip` text COLLATE utf8_slovenian_ci NOT NULL,
   `nameFather` text COLLATE utf8_slovenian_ci NOT NULL,
   `nameSon` text COLLATE utf8_slovenian_ci NOT NULL,
@@ -78,7 +78,7 @@ $createRecords = executeSQL("CREATE TABLE IF NOT EXISTS `records` (
 $createArchive = executeSQL("CREATE TABLE IF NOT EXISTS `archive` (
   `id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
   `oldID` int(11) NOT NULL,
-  `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `date` datetime NOT NULL,
   `ip` text COLLATE utf8_slovenian_ci NOT NULL,
   `nameFather` text COLLATE utf8_slovenian_ci NOT NULL,
   `nameSon` text COLLATE utf8_slovenian_ci NOT NULL,
@@ -91,16 +91,19 @@ $createArchive = executeSQL("CREATE TABLE IF NOT EXISTS `archive` (
 echo "Postopek končan";
 
 if(!$createKonfig->success){
+	echo "<br>-------------------------<br>";
 	echo "Napaka pri tabeli Konfig!<br>";
 	echo $createKonfig->error;
 }
 
 if(!$createRecords->success){
+	echo "<br>-------------------------<br>";
 	echo "Napaka pri tabeli Records!<br>";
 	echo $createRecords->error;
 }
 
 if(!$createArchive->success){
+	echo "<br>-------------------------<br>";
 	echo "Napaka pri tabeli Archive!<br>";
 	echo $createArchive->error;
 }

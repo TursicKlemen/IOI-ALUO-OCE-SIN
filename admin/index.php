@@ -26,6 +26,7 @@
 	}
 	else if(isset($_POST['archive'])){		
 		if(archiveRecords()){
+			resetAutoIncrease();
 			echo "<script>alert('Podatki uspešno arhivirani.');</script>";
 		}
 		else{
@@ -35,6 +36,24 @@
 	else
 	{
 		$_SESSION["formid"] = md5(rand(0,10000000));
+	}
+	
+	function resetAutoIncrease(){
+		global $db;
+			
+		$query = "ALTER TABLE records MODIFY id int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;";
+				
+		try 
+			{ 
+				$stmt   = $db->prepare($query);
+				$result = $stmt->execute();				
+				return true;
+			} 
+		catch(PDOException $ex) 
+			{
+				//return false;
+				die("Napaka: " . $ex->getMessage()); 
+			}		
 	}
 
 	function archiveRecords(){
