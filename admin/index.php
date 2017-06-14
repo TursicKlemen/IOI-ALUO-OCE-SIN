@@ -1,6 +1,7 @@
 <!DOCTYPE HTML>
 	<?php
 	require("../conf.php");
+	
 	//default vrednost, se potem povozi iz baze
 	$daysShow = 30;
 
@@ -9,7 +10,6 @@
 		$_SESSION["formid"] = '';
 		unset($_POST['formid']);
 		unset($_POST['submit']);
-		//echo 'Process form';
 		$success = true;
 		foreach($_POST as $kljuc => $vrednost){
 			if(!updateKonfig($kljuc, $vrednost)){
@@ -24,11 +24,97 @@
 			echo "<script>alert('Napaka pri shranjevanju.');</script>";
 		}
 	}
+	else if(isset($_POST['archive'])){		
+		if(archiveRecords()){
+			echo "<script>alert('Podatki uspešno arhivirani.');</script>";
+		}
+		else{
+			echo "<script>alert('Napaka pri arhiviranju.');</script>";
+		}
+	}
 	else
 	{
 		$_SESSION["formid"] = md5(rand(0,10000000));
 	}
 
+	function archiveRecords(){
+		global $db;
+		$success = true;
+		$sql = "SELECT * FROM records";        
+		try {
+			$q = $db->prepare($sql);
+			$q->execute();
+			$records = $q->fetchall();
+		}
+		catch (PDOException $ex) {
+			return false;
+			die("Napaka: ".$ex->getMessage());
+		}
+		
+		foreach($records as $key => $value) {
+				$archived = saveToArchive($value['id'], $value['date'], $value['ip'], $value['nameFather'], $value['nameSon'], $value['coords'], $value['coordsInv'], $value['offCenter']);
+				if($archived){
+					if(!deleteFromRecords($value['id'])){
+						$success = false;
+					}
+				}
+				else{
+					$success = false;
+				}
+		}
+		
+		return $success;		
+	}
+	
+	function deleteFromRecords($id){
+		global $db;
+		
+		$seznam = array(
+				":1"=>$id);
+		
+		$query = "DELETE FROM records WHERE id = :1";
+				
+		try 
+			{ 
+				$stmt   = $db->prepare($query);
+				$result = $stmt->execute($seznam);				
+				return true;
+			} 
+		catch(PDOException $ex) 
+			{
+				return false;
+				die("Napaka: " . $ex->getMessage()); 
+			}
+	}
+	
+	function saveToArchive($id, $date, $ip, $oce, $sin, $coords, $coordsInv, $center){
+		global $db;
+		
+		$seznam = array(
+				":1"=>'',
+				":2"=>$id,
+				":3"=>$date,
+				":4"=>$ip,
+				":5"=>$oce,
+				":6"=>$sin,
+				":7"=>$coords,
+				":8"=>$coordsInv,
+				":9"=>$center);
+		
+		$query = "INSERT INTO archive VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9)";
+				
+		try 
+			{ 
+				$stmt   = $db->prepare($query);
+				$result = $stmt->execute($seznam);				
+				return true;
+			} 
+		catch(PDOException $ex) 
+			{
+				return false;
+				die("Napaka: " . $ex->getMessage()); 
+			}		
+	}
 	
 	
 	function saveToBase($db){
@@ -50,7 +136,6 @@
 			{ 
 				$stmt   = $db->prepare($query);
 				$result = $stmt->execute($seznam);
-				//echo "Podatki uspešno shranjeni.<br>";
 				echo "<script>alert('Podatki uspešno shranjeni');</script>";
 			} 
 		catch(PDOException $ex) 
@@ -285,7 +370,12 @@
 									<input type="hidden" name="formid" value="<?php echo htmlspecialchars($_SESSION["formid"]); ?>" />
 									
 									<div class="form-group">
-										<input type="submit" class="btn btn-default" name="submit" value="Shrani" />
+										<input type="submit" class="btn btn-default" name="submit" value="Shrani" />										
+									</div>
+									
+									<br>
+									<div class="form-group">
+										<input type="submit" class="btn btn-default" name="archive" value="Arhiviraj in začni znova"  onclick="return confirm('Ste prepričani da želite začeti znova?');" />
 									</div>
 							
 								</div>
@@ -302,14 +392,8 @@
 			</div>
 			<div class="panel-body text-center">
 				
-				<?php /*<div class="panel panel-default col-sm-2">					
-					<div class="panel-body text-center">
-						<div class="btn-group" role="group" aria-label="...">
-							Ime<br>
-							Ime2
-						</div>
-					</div>
-				</div>*/
+				<?php
+				
 				$days_ago = date('d.m.Y', strtotime("-".$daysShow." days", strtotime(date("r"))));
 				echo "<p>Grafični prikaz za zapise do datuma: <b>".$days_ago."</b></p>";
 				

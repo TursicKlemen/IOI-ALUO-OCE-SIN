@@ -34,7 +34,6 @@
 			{ 
 				$stmt   = $db->prepare($query);
 				$result = $stmt->execute($seznam);
-				//echo "Podatki uspešno shranjeni.<br>";
 				echo "<script>alert('Podatki uspešno shranjeni');</script>";
 			} 
 		catch(PDOException $ex) 
@@ -174,26 +173,15 @@
 			</div>
 			<div class="panel-body text-center">
 				
-				<?php /*<div class="panel panel-default col-sm-2">					
-					<div class="panel-body text-center">
-						<div class="btn-group" role="group" aria-label="...">
-							Ime<br>
-							Ime2
-						</div>
-					</div>
-				</div>*/ ?>
-				
 				<?php
 				
 					$inserts = readNames();
 					
 					foreach($inserts as $insert){
 						echo "<div class='panel panel-default col-sm-2'>";
-						echo "<div class='panel-body text-center' style='color: rgba(0, 0, 0, ".$insert['opacity'].")'>";
-						//echo "<div class='btn-group' role='group' aria-label='...'>";
+						echo "<div class='panel-body text-center' style='color: rgba(0, 0, 0, ".$insert['opacity'].")'>";						
 						echo $insert["nameFather"]."<br>";
-						echo $insert["nameSon"];
-						//echo "</div>";
+						echo $insert["nameSon"];						
 						echo "</div>";
 						echo "</div>";						
 					}
@@ -306,11 +294,10 @@ function init(){
 	$("#myCanvas").css("cursor", "crosshair");
 	document.getElementById("coords").value = "";
 	
-				//krog
+	  //krog
       context.beginPath();
       context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
-      /*context.fillStyle = 'green';
-      context.fill();*/
+
       context.lineWidth = 1;
       context.strokeStyle = '#003300';
       context.stroke();
@@ -336,10 +323,7 @@ init();
 		
 start();
 function start() {
-	
-	/*canvas.addEventListener("touchstart", function (e) {
-		console.log("test");
-	});*/
+
 		    
     canvas.onmousedown = function(e) {
 			if(!lineDrawed){
@@ -376,8 +360,6 @@ function start() {
 		koordN = newCoord(pos.x, pos.y);
 		
 		context.beginPath();
-		/*koordL = calcCoord(last.x, last.y);
-		koordN = calcCoord(pos.x, pos.y);*/
 				
         context.moveTo(koordL.x, koordL.y);
         context.lineTo(koordN.x, koordN.y);
@@ -396,17 +378,6 @@ function start() {
         isDown = false;
 				lineDrawed = true;
 				
-				//mirrorImage();
-				/*context.save();
-				context.translate(canvas.width/2, canvas.height/2);	
-				// Rotate 1 degree
-				context.rotate(Math.PI / 1);				
-				// Move registration point back to the top left corner of canvas
-				context.translate(-canvas.width/2, -canvas.height/2);
-				redrawImage();
-				context.restore();*/
-				
-				//mirrorImage();
 				document.getElementById("coords").value = JSON.stringify(points);
 				document.getElementById("coordsInv").value = JSON.stringify(pointsInv);
 				document.getElementById("center").value = centerX;
@@ -438,7 +409,6 @@ document.getElementById('clear').addEventListener('click', function() {
 }, false);
 //End risanje po canvasu
 
-//document.getElementById('myCanvas').addEventListener('click', drawLine, false);
 
 function getCursorPosition(e) {
     var x;
@@ -455,52 +425,6 @@ function getCursorPosition(e) {
     return [x, y];
 }
 
-function drawLine(e) {
-	x = getCursorPosition(e)[0] - this.offsetLeft;
-	y = getCursorPosition(e)[1] - this.offsetTop;
-	
-	if(pointInCircle(x, y, 250, 250, 240)){
-		//klik je v krogu
-			context = this.getContext('2d');
-			
-			if (clicks != 1) {
-					clicks++;
-			} else {
-					context.beginPath();
-					context.moveTo(lastClick[0], lastClick[1]);
-					context.lineTo(x, y, 6);
-					
-					//context.strokeStyle = '#000000';
-					context.strokeStyle = 'black';
-					context.lineWidth = 3;
-					context.stroke();
-					
-					clicks = 0;
-			
-			
-			
-			newStart = newCoord(lastClick[0], lastClick[1]);
-			newEnd = newCoord(x, y);
-			
-			context.beginPath();
-					context.moveTo(newStart[0], newStart[1]);
-					context.lineTo(newEnd[0], newEnd[1], 6);
-					
-					//context.strokeStyle = '#000000';
-					context.strokeStyle = 'black';
-					context.lineWidth = 3;
-					context.stroke();
-			
-			
-			}
-			
-			lastClick = [x, y];
-	}
-	else{
-		//ni v krogu
-		
-	}
-};
 
 function pointInCircle(x, y, cx, cy, radius) {
   var distancesquared = (x - cx) * (x - cx) + (y - cy) * (y - cy);
