@@ -2,8 +2,8 @@
 Online page: http://www.klement.tk/aluo/
 
 Admin dostop: http://www.klement.tk/aluo/admin
-	User: aluo
-	Pass: adminaluo113
+	- User: aluo
+	- Pass: adminaluo113
 
 Za delovanje strani je potrebno: Apache, MySQL in PHP
 
