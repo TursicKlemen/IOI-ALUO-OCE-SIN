@@ -1,0 +1,5 @@
+AuthGroupFile /dev/null
+AuthType Basic
+AuthName "Admin area"
+require valid-user
+ErrorDocument 401 "Unauthorized Access"
