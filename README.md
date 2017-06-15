@@ -6,7 +6,7 @@ Admin dostop: http://www.klement.tk/aluo/admin
 	- User: aluo
 	- Pass: adminaluo113
 
-Za delovanje strani je potrebno: Apache, MySQL in PHP
+Za delovanje strani je potrebno: *Apache, MySQL in PHP*
 
 Navodila za postavitev strani:
 1. v datoteki conf.php na vrhu spremenite podatke za dostop do MySQL baze ($host, $dbname, $username, $password)
