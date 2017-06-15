@@ -1,5 +1,6 @@
 AuthGroupFile /dev/null
 AuthType Basic
+AuthUserFile .htpasswd
 AuthName "Admin area"
 require valid-user
 ErrorDocument 401 "Unauthorized Access"
