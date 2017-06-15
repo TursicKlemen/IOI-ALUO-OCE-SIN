@@ -20,10 +20,10 @@ Povsod v kodi so poti relativne, tako se stran lahko nahaja v kateremkoli imenik
 
 Vprašanja in kontakt: tursic.klemen@gmail.com
 
-**Prva stran:
+**Prva stran:**
 ![Stran Stran](/slike/page.png)
 
 
 
-**Administrator plošča:
+**Administrator plošča:**
 ![Admin plošča Admin plošča](/slike/admin_page.png)
