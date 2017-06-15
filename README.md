@@ -2,6 +2,7 @@
 Online page: http://www.klement.tk/aluo/
 
 Admin dostop: http://www.klement.tk/aluo/admin
+
 	- User: aluo
 	- Pass: adminaluo113
 
