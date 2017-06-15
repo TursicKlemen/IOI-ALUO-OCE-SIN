@@ -19,3 +19,11 @@ apache inštalacije (na Windows pri xampp je to 'C:\xampp\apache', pri Linuxu pa
 Povsod v kodi so poti relativne, tako se stran lahko nahaja v kateremkoli imeniku, pomembno je le da datoteke ostanejo skupaj v enaki strukturi.
 
 Vprašanja in kontakt: tursic.klemen@gmail.com
+
+**Prva stran:
+![Stran Stran](/slike/page.png)
+
+
+
+**Administrator plošča:
+![Admin plošča Admin plošča](/slike/admin_page.png)
